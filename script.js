@@ -1,4 +1,4 @@
-const REANIME_API = "http://localhost:8000";
+const REANIME_API = "https://kumo-anime.onrender.com/";
 const ANILIST_API = "https://graphql.anilist.co";
 
 let catalogCache = [];
