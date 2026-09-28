@@ -1,0 +1,36 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #12120F;
+    color: #FFFF66;
+    overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #12120F;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #B3B347;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #FFFF66;
+}
+
+.hero-gradient {
+    background: linear-gradient(90deg, #12120F 0%, rgba(18, 18, 15, 0.85) 50%, rgba(18, 18, 15, 0.3) 100%);
+}
+
+.hero-gradient-bottom {
+    background: linear-gradient(180deg, transparent 0%, #12120F 100%);
+}
+
+.zesty-glow {
+    box-shadow: 0 0 20px rgba(255, 255, 102, 0.25);
+}

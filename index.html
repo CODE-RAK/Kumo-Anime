@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kumo-Anime | Zesty Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zestyDark: '#12120F',
+                        zestyCard: '#1E1E1A',
+                        zestyOlive: '#B3B347',
+                        zestyMutedOlive: '#D6D58B',
+                        zestySoft: '#FFE566',
+                        zestyBright: '#FFFF66'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-zestyDark text-zestySoft min-h-screen flex overflow-hidden selection:bg-zestyBright selection:text-zestyDark">
+
+    <aside class="w-20 bg-zestyCard border-r border-zestyMutedOlive/20 flex flex-col items-center py-6 justify-between z-40 shrink-0">
+        <div class="flex flex-col items-center space-y-8">
+            <div onclick="navigate('home')" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-zestyBright to-zestyOlive flex items-center justify-center cursor-pointer zesty-glow">
+                <i class="fa-solid fa-spider text-zestyDark text-xl"></i>
+            </div>
+            <nav class="flex flex-col space-y-6 text-zestyMutedOlive">
+                <button onclick="navigate('home')" class="hover:text-zestyBright transition-colors text-lg" title="Home"><i class="fa-solid fa-house"></i></button>
+                <button onclick="navigate('browse')" class="hover:text-zestyBright transition-colors text-lg" title="Explore"><i class="fa-solid fa-compass"></i></button>
+                <button onclick="alert('Bookmarks feature coming soon!')" class="hover:text-zestyBright transition-colors text-lg" title="Watchlist"><i class="fa-solid fa-bookmark"></i></button>
+                <button onclick="alert('Community hub coming soon!')" class="hover:text-zestyBright transition-colors text-lg" title="Community"><i class="fa-solid fa-comments"></i></button>
+            </nav>
+        </div>
+        <div class="flex flex-col space-y-6 text-zestyMutedOlive">
+            <button onclick="openAuthModal()" class="hover:text-zestyBright transition-colors text-lg" title="Account Login"><i class="fa-solid fa-user"></i></button>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col h-screen overflow-y-auto">
+        <header class="sticky top-0 z-30 bg-zestyDark/90 backdrop-blur-md border-b border-zestyMutedOlive/20 px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-4 w-96">
+                <div class="relative w-full">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-zestyMutedOlive">
+                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                    </span>
+                    <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="Search anime..." 
+                        class="w-full bg-zestyCard border border-zestyMutedOlive/40 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder-zestyMutedOlive/60 focus:outline-none focus:border-zestyBright transition-all">
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-6">
+                <span id="apiStatusBadge" class="text-xs bg-zestyCard border border-zestyMutedOlive/40 px-3 py-1.5 rounded-full text-zestyBright flex items-center">
+                    <i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Syncing ReAnime...
+                </span>
+                <button onclick="openAuthModal()" class="px-5 py-2.5 bg-zestyBright hover:bg-zestySoft text-zestyDark font-bold rounded-xl text-xs transition-all zesty-glow">
+                    Sign In
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-grow">
+            <!-- Home View -->
+            <div id="view-home" class="space-y-10 pb-16">
+                <section class="relative w-full h-[480px] overflow-hidden">
+                    <div class="absolute inset-0">
+                        <img id="heroBannerImg" src="https://placehold.co/1920x1080/1E1E1A/FFFF66?text=Kumo-Anime" alt="Hero Banner" class="w-full h-full object-cover scale-105 opacity-80">
+                        <div class="absolute inset-0 bg-gradient-to-r from-zestyDark via-zestyDark/70 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-zestyDark via-transparent to-transparent"></div>
+                    </div>
+
+                    <div class="relative max-w-7xl mx-auto px-8 h-full flex flex-col justify-center max-w-3xl">
+                        <span id="heroGenres" class="text-zestyMutedOlive text-sm font-semibold mb-2">Loading genres...</span>
+                        <h1 id="heroTitle" class="text-4xl sm:text-6xl font-black tracking-tight text-white mb-4 drop-shadow-lg">
+                            Loading... <span class="text-zestyBright">Edition</span>
+                        </h1>
+                        <p id="heroSynopsis" class="text-zestyMutedOlive text-sm sm:text-base mb-6 line-clamp-3 leading-relaxed">
+                            Loading cinematic synopsis from API...
+                        </p>
+                        <div class="flex items-center space-x-4">
+                            <button id="heroWatchBtn" class="px-7 py-3 bg-zestyBright hover:bg-zestySoft text-zestyDark font-bold rounded-xl zesty-glow flex items-center space-x-2 transition-all">
+                                <i class="fa-solid fa-play"></i>
+                                <span>Watch Now</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="max-w-7xl mx-auto px-8 space-y-10">
+                    <div>
+                        <h2 class="text-2xl font-bold tracking-tight text-white mb-6 flex items-center">
+                            <i class="fa-solid fa-fire text-zestyBright mr-3"></i> Trending Simulcasts
+                        </h2>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6" id="trendingGrid"></div>
+                    </div>
+
+                    <div>
+                        <h2 class="text-2xl font-bold tracking-tight text-white mb-6 flex items-center">
+                            <i class="fa-solid fa-trophy text-zestyBright mr-3"></i> Top Weekly Rankings
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="rankingGrid"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Browse View -->
+            <div id="view-browse" class="max-w-7xl mx-auto px-8 py-10 hidden space-y-6">
+                <h1 class="text-3xl font-black tracking-tight text-white">Explore Catalog</h1>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6" id="catalogGrid"></div>
+            </div>
+
+            <!-- Detail / Watch View -->
+            <div id="view-watch" class="max-w-7xl mx-auto px-8 py-8 hidden space-y-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="space-y-6">
+                        <div class="bg-zestyCard border border-zestyMutedOlive/30 rounded-2xl p-5 shadow-xl space-y-4">
+                            <img id="watchCoverImg" src="" alt="Cover" class="w-full aspect-[3/4] object-cover rounded-xl shadow-md">
+                            <h2 id="watchTitle" class="text-xl font-bold text-white">Anime Title</h2>
+                            <p id="watchJapaneseTitle" class="text-xs text-zestyMutedOlive font-mono -mt-3"></p>
+                            <p id="watchDescription" class="text-xs text-zestyMutedOlive leading-relaxed line-clamp-6"></p>
+                            <div class="pt-2 border-t border-zestyMutedOlive/20 text-xs space-y-2 text-zestyMutedOlive">
+                                <p><strong>Status:</strong> <span id="watchStatus" class="text-white">Finished</span></p>
+                                <p><strong>Studios:</strong> <span id="watchStudios" class="text-white">Studio Pierrot</span></p>
+                                <p><strong>Episodes:</strong> <span id="watchTotalEp" class="text-white">12</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-zestyCard border border-zestyMutedOlive/40 rounded-2xl overflow-hidden shadow-2xl">
+                            <div class="relative bg-zestyDark aspect-video w-full flex items-center justify-center">
+                                <video id="hlsVideoPlayer" class="w-full h-full object-contain" controls autoplay></video>
+                                <div id="videoLoader" class="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-black/90">
+                                    <div class="w-10 h-10 rounded-full border-4 border-zestyBright border-t-transparent animate-spin"></div>
+                                    <span class="text-xs text-zestyMutedOlive">Resolving Stream & Decrypting HLS...</span>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-zestyDark/80 flex items-center justify-between text-xs border-t border-zestyMutedOlive/20">
+                                <span id="currentPlayingEpText" class="text-zestyBright font-bold">Select an episode to start streaming</span>
+                                <span class="text-zestyMutedOlive">1080p HD Sub/Dub Engine</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-zestyCard border border-zestyMutedOlive/30 rounded-2xl p-6 shadow-xl space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-white text-base flex items-center">
+                                    <i class="fa-solid fa-list text-zestyBright mr-2"></i> Episodes
+                                </h3>
+                                <span id="episodesCountBadge" class="text-xs text-zestyMutedOlive font-mono">12 Available</span>
+                            </div>
+                            <div id="episodesGrid" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2.5 max-h-60 overflow-y-auto pr-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Auth Modal Overlay -->
+    <div id="authModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-zestyCard border border-zestyMutedOlive/40 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-6 relative">
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-zestyMutedOlive hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-zestyBright to-zestyOlive flex items-center justify-center mx-auto zesty-glow">
+                    <i class="fa-solid fa-spider text-zestyDark text-xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-white">Welcome to Kumo-Anime</h2>
+                <p class="text-xs text-zestyMutedOlive">Sign in to sync your watchlists and favorites</p>
+            </div>
+            <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-zestyMutedOlive mb-1.5">Email Address</label>
+                    <input type="email" id="authEmail" required placeholder="kumo@anime.zesty" class="w-full bg-zestyDark border border-zestyMutedOlive/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zestyMutedOlive/40 focus:outline-none focus:border-zestyBright">
+                </div>
+                <button type="submit" class="w-full py-3 bg-zestyBright hover:bg-zestySoft text-zestyDark font-bold rounded-xl text-sm transition-all zesty-glow">
+                    Continue with Email
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
