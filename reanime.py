@@ -1,12 +1,10 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-import asyncio
 import os
 import httpx
 
-app = FastAPI(title="Kumo-Anime Consumet Backend")
+app = FastAPI(title="Kumo-Anime Direct API")
 
-# Enable CORS for frontend connectivity
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,77 +13,86 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Standard public instance or self-hosted base url for Consumet
-UPSTREAM_BASE = "https://api.consumet.org"
-
-async def _get(path: str, params: dict = None):
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        try:
-            url = f"{UPSTREAM_BASE}{path}" if path.startswith("/") else path
-            response = await client.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"})
-            if response.status_code != 200:
-                return {}
-            return response.json()
-        except Exception as e:
-            print(f"Consumet fetch error for {path}: {e}")
-            return {}
+ANILIST_URL = "https://graphql.anilist.co"
 
 @app.get("/home")
 async def home(limit: int = Query(20, ge=1, le=100)):
-    try:
-        data = await _get("/anime/gogoanime/recent-episodes", {"page": 1})
-        results = data.get("results", [])
-        
-        # Fallback to trending if recent is empty
-        if not results:
-            trending_data = await _get("/anime/gogoanime/trending", {"page": 1})
-            results = trending_data.get("results", [])
-
-        return {
-            "latest_aired": results,
-            "top_weekly": results[:10] if results else []
+    query = """
+    query ($perPage: Int) {
+      Page (perPage: $perPage) {
+        media (sort: [TRENDING_DESC, POPULARITY_DESC], type: ANIME) {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          coverImage {
+            large
+          }
+          episodes
+          status
+          description
+          genres
         }
-    except Exception as e:
-        print(f"Home route error: {e}")
-        return {"latest_aired": [], "top_weekly": []}
+      }
+    }
+    """
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            response = await client.post(ANILIST_URL, json={"query": query, "variables": {"perPage": limit}})
+            data = response.json()
+            media_list = data.get("data", {}).get("Page", {}).get("media", [])
+            
+            # Format to match your frontend structure
+            formatted = []
+            for item in media_list:
+                formatted.append({
+                    "id": str(item["id"]),
+                    "title": item["title"]["english"] or item["title"]["romaji"],
+                    "image": item["coverImage"]["large"],
+                    "description": item["description"],
+                    "totalEpisodes": item["episodes"]
+                })
+            
+            return {
+                "latest_aired": formatted,
+                "top_weekly": formatted[:10]
+            }
+        except Exception as e:
+            print(f"AniList error: {e}")
+            return {"latest_aired": [], "top_weekly": []}
 
 @app.get("/search")
 async def search_anime(q: str = Query(...)):
-    try:
-        data = await _get(f"/anime/gogoanime/{q}")
-        return data
-    except Exception as e:
-        print(f"Search route error: {e}")
-        return {"results": []}
-
-@app.get("/info/{slug}")
-async def anime_info(slug: str):
-    try:
-        data = await _get(f"/anime/gogoanime/info/{slug}")
-        return data
-    except Exception as e:
-        print(f"Info route error for {slug}: {e}")
-        return {
-            "title": slug.replace("-", " ").title(),
-            "description": "Metadata unavailable from upstream provider.",
-            "episodes": []
+    query = """
+    query ($search: String) {
+      Page (perPage: 20) {
+        media (search: $search, type: ANIME) {
+          id
+          title { romaji english }
+          coverImage { large }
+          episodes
         }
-
-@app.get("/servers/{slug}/{episode}")
-async def servers(slug: str, episode: int):
-    ep_id = f"{slug}-episode-{episode}"
-    data = await _get(f"/anime/gogoanime/watch/{ep_id}")
-    return data
-
-@app.get("/stream/from-link")
-async def stream_from_link(link: str = Query(...)):
-    return {"streamUrl": link}
-
-@app.get("/stream/{access_id}")
-async def stream(access_id: str):
-    data = await _get(f"/anime/gogoanime/watch/{access_id}")
-    return data
+      }
+    }
+    """
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            response = await client.post(ANILIST_URL, json={"query": query, "variables": {"search": q}})
+            data = response.json()
+            media_list = data.get("data", {}).get("Page", {}).get("media", [])
+            
+            results = [{
+                "id": str(item["id"]),
+                "title": item["title"]["english"] or item["title"]["romaji"],
+                "image": item["coverImage"]["large"]
+            } for item in media_list]
+            
+            return {"results": results}
+        except Exception as e:
+            return {"results": []}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("reanime:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=1, reload=False)
+    uvicorn.run("reanime:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
