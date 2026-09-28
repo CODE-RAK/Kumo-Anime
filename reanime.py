@@ -4,9 +4,9 @@ import asyncio
 import os
 import httpx
 
-app = FastAPI(title="Kumo-Anime API Backend")
+app = FastAPI(title="Kumo-Anime Consumet Backend")
 
-# Enable CORS for frontend integration
+# Enable CORS for frontend connectivity
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Using reliable public anime API provider as upstream base
+# Standard public instance or self-hosted base url for Consumet
 UPSTREAM_BASE = "https://api.consumet.org"
 
 async def _get(path: str, params: dict = None):
@@ -27,16 +27,20 @@ async def _get(path: str, params: dict = None):
                 return {}
             return response.json()
         except Exception as e:
-            print(f"Upstream fetch error for {path}: {e}")
+            print(f"Consumet fetch error for {path}: {e}")
             return {}
 
 @app.get("/home")
 async def home(limit: int = Query(20, ge=1, le=100)):
     try:
-        # Fetching trending and recent releases
-        data = await _get("/anime/gogoanime/trending", {"page": 1})
+        data = await _get("/anime/gogoanime/recent-episodes", {"page": 1})
         results = data.get("results", [])
         
+        # Fallback to trending if recent is empty
+        if not results:
+            trending_data = await _get("/anime/gogoanime/trending", {"page": 1})
+            results = trending_data.get("results", [])
+
         return {
             "latest_aired": results,
             "top_weekly": results[:10] if results else []
@@ -63,14 +67,12 @@ async def anime_info(slug: str):
         print(f"Info route error for {slug}: {e}")
         return {
             "title": slug.replace("-", " ").title(),
-            "description": "Fallback description: Could not fetch metadata.",
-            "status": "Ongoing",
-            "episodes": [{"number": i, "id": f"{slug}-episode-{i}"} for i in range(1, 13)]
+            "description": "Metadata unavailable from upstream provider.",
+            "episodes": []
         }
 
 @app.get("/servers/{slug}/{episode}")
 async def servers(slug: str, episode: int):
-    # Constructing episode ID standard for Gogoanime provider format
     ep_id = f"{slug}-episode-{episode}"
     data = await _get(f"/anime/gogoanime/watch/{ep_id}")
     return data
