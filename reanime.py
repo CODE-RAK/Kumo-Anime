@@ -41,18 +41,41 @@ async def home(limit: int = Query(20, ge=1, le=100)):
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
             response = await client.post(ANILIST_URL, json={"query": query, "variables": {"perPage": limit}})
-            data = response.json()
-            media_list = data.get("data", {}).get("Page", {}).get("media", [])
+            if response.status_code != 200:
+                return {"latest_aired": [], "top_weekly": []}
+                
+            res_json = response.json()
+            if not res_json or not isinstance(res_json, dict):
+                return {"latest_aired": [], "top_weekly": []}
+                
+            data = res_json.get("data")
+            if not data or not isinstance(data, dict):
+                return {"latest_aired": [], "top_weekly": []}
+                
+            page = data.get("Page")
+            if not page or not isinstance(page, dict):
+                return {"latest_aired": [], "top_weekly": []}
+                
+            media_list = page.get("media", [])
+            if not media_list:
+                return {"latest_aired": [], "top_weekly": []}
             
-            # Format to match your frontend structure
             formatted = []
             for item in media_list:
+                if not item:
+                    continue
+                title_obj = item.get("title") or {}
+                cover_obj = item.get("coverImage") or {}
+                
+                title = title_obj.get("english") or title_obj.get("romaji") or "Unknown Title"
+                image = cover_obj.get("large") or ""
+                
                 formatted.append({
-                    "id": str(item["id"]),
-                    "title": item["title"]["english"] or item["title"]["romaji"],
-                    "image": item["coverImage"]["large"],
-                    "description": item["description"],
-                    "totalEpisodes": item["episodes"]
+                    "id": str(item.get("id", "")),
+                    "title": title,
+                    "image": image,
+                    "description": item.get("description", "No description available."),
+                    "totalEpisodes": item.get("episodes") or 12
                 })
             
             return {
@@ -80,15 +103,28 @@ async def search_anime(q: str = Query(...)):
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
             response = await client.post(ANILIST_URL, json={"query": query, "variables": {"search": q}})
-            data = response.json()
-            media_list = data.get("data", {}).get("Page", {}).get("media", [])
+            if response.status_code != 200:
+                return {"results": []}
+                
+            res_json = response.json()
+            if not res_json or not isinstance(res_json, dict):
+                return {"results": []}
+                
+            data = res_json.get("data", {}) or {}
+            page = data.get("Page", {}) or {}
+            media_list = page.get("media", []) or []
             
-            results = [{
-                "id": str(item["id"]),
-                "title": item["title"]["english"] or item["title"]["romaji"],
-                "image": item["coverImage"]["large"]
-            } for item in media_list]
-            
+            results = []
+            for item in media_list:
+                if not item:
+                    continue
+                title_obj = item.get("title") or {}
+                cover_obj = item.get("coverImage") or {}
+                results.append({
+                    "id": str(item.get("id", "")),
+                    "title": title_obj.get("english") or title_obj.get("romaji") or "Unknown",
+                    "image": cover_obj.get("large") or ""
+                })
             return {"results": results}
         except Exception as e:
             return {"results": []}
